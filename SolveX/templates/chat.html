@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chatbot con Formularios en Nueva Ventana</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  
+  <!-- Función para alternar formularios según la opción -->
+  <script>
+    function toggleForm(option) {
+      if (option === "face") {
+        document.getElementById("face-form").style.display = "block";
+        document.getElementById("audio-form").style.display = "none";
+      } else if (option === "audio") {
+        document.getElementById("face-form").style.display = "none";
+        document.getElementById("audio-form").style.display = "block";
+      } else {
+        // Oculta ambos formularios
+        document.getElementById("face-form").style.display = "none";
+        document.getElementById("audio-form").style.display = "none";
+      }
+    }
+  </script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const socket = io();
+
+      socket.on('connect', () => {
+        console.log("Conectado al servidor con ID:", socket.id);
+      });
+
+      // Manejo del envío de mensajes de texto
+      document.getElementById("send-button").addEventListener("click", () => {
+        const messageInput = document.getElementById("message-input");
+        let message = messageInput.value;
+        if (message.trim() !== "") {
+          const chatWindow = document.getElementById("chat-window");
+          const userMessageDiv = document.createElement("div");
+          userMessageDiv.textContent = "Tú: " + message;
+          chatWindow.appendChild(userMessageDiv);
+
+          // Dependiendo del contenido, se muestra el formulario adecuado
+          if (message.toLowerCase().includes("rostro")) {
+            toggleForm("face");
+          } else if (message.toLowerCase().includes("audio")) {
+            toggleForm("audio");
+          } else {
+            toggleForm("none");
+          }
+
+          socket.emit('chat_message', message);
+          messageInput.value = "";
+        }
+      });
+
+      // Mostrar la respuesta del chat
+      socket.on("chat_response", (response) => {
+        const chatWindow = document.getElementById("chat-window");
+        const messageDiv = document.createElement("div");
+        messageDiv.textContent = response;
+        chatWindow.appendChild(messageDiv);
+      });
+    });
+  </script>
+  
+  <style>
+    #chat-window {
+      border: 1px solid #ccc;
+      height: 300px;
+      overflow-y: auto;
+      padding: 10px;
+      margin-bottom: 10px;
+      white-space: pre-wrap; 
+    }
+    body {
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chatbot 🤖</h1>
+  
+  <!-- Sección del chat -->
+  <div id="chat-window"></div>
+  <input type="text" id="message-input" placeholder="Ingresa tu mensaje aquí">
+  <button id="send-button">Enviar</button>
+
+  <!-- Formulario para detección facial (inicialmente oculto) -->
+  <div id="face-form" style="display: none;">
+    <!-- target="_blank" hace que al enviar, la respuesta se abra en otra ventana o pestaña -->
+    <form action="/detect-face" method="post" enctype="multipart/form-data" target="_blank">
+      <input type="file" name="image" required>
+      <button type="submit">Subir imagen 🖼️</button>
+    </form>
+  </div>
+
+  <!-- Formulario para transcripción de audio (inicialmente oculto) -->
+  <div id="audio-form" style="display: none;">
+    <form action="/transcribe" method="post" enctype="multipart/form-data" target="_blank">
+      <input type="file" name="audio" required>
+      <button type="submit">Subir audio 🔊</button>
+    </form>
+  </div>
+</body>
+</html>
